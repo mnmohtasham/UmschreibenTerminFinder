@@ -24,7 +24,7 @@ TARGET_DATE = datetime.strptime(TARGET_DATE_STR, "%Y-%m-%d")
 CHROMEDRIVER_PATH = config["CHROMEDRIVER_PATH"]
 POSTAL_CODE = config["POSTAL_CODE"]
 SERVICE_ID = config["SERVICE_ID"]
-INTERVAL_MINUTES = config.get("INTERVAL_MINUTES", 60)
+INTERVAL_MINUTES = config.get("INTERVAL_MINUTES", 30)
 
 
 def random_sleep():
@@ -33,6 +33,18 @@ def random_sleep():
     print(f"Sleeping for {sleep_time} seconds.")
     time.sleep(sleep_time)
 
+def send_private_telegram_message(message):
+    payload = {
+        "chat_id": TELEGRAM_USER_ID,  # Send directly to you
+        "text": message,
+        "parse_mode": "Markdown",
+    }
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    response = requests.post(url, json=payload)
+    if response.ok:
+        print("📨 Private Telegram message sent")
+    else:
+        print("⚠️ Failed to send private message:", response.text)
 
 def send_telegram_message(message, silent=False, notify_user=False):
     payload = {
@@ -134,9 +146,10 @@ def run_script():
             formatted = earliest.strftime('%A, %d %B %Y')
             print(f"✅ Earliest available appointment date: {formatted}")
 
-            if earliest < TARGET_DATE:
+            if earliest.date() < TARGET_DATE.date():
                 # Earlier than target, tag you
                 send_telegram_message(f"📅 Sooner appointment available: {formatted}", silent=False, notify_user=True)
+                send_private_telegram_message(f"🚨 Sooner appointment available: {formatted}")  # 🚀 Will actually notify you
             else:
                 # Later or equal, send silently to channel
                 send_telegram_message(f"📅 Appointment available: {formatted}", silent=True, notify_user=False)
@@ -159,6 +172,6 @@ def run_script():
 # Run the script in an infinite loop every 30 minutes
 while True:
     run_script()
-    print("⏳ Sleeping for 60 minutes before the next run...")
+    print("⏳ Sleeping for 30 minutes before the next run...")
     # scheduled run
-    time.sleep(INTERVAL_MINUTES * 60)  # Sleep for 30 minutes
+    time.sleep(INTERVAL_MINUTES * 60)  # Sleep for 60 minutes
